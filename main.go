@@ -32,11 +32,16 @@ func externalLinkTrackerHandler(mongoUrl string, mongoDbName string) func(http.R
 		err1 := collection.Find(bson.M{"external_url": external_url}).One(&result)
 
 		if err1 != nil {
-			panic(err1)
+			if err1.Error() == "not found" {
+				http.NotFound(w, req)
+			} else {
+				panic(err1)
+			}
+		} else {
+			println("Found:", result.ExternalUrl)
+			// Explicit 302 because this is a redirection proxy
+			http.Redirect(w, req, external_url, http.StatusFound)
 		}
-		println("Found:", result.ExternalUrl)
-		// Explicit 302 because this is a redirection proxy
-		http.Redirect(w, req, external_url, http.StatusFound)
 	}
 }
 
