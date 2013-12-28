@@ -14,7 +14,7 @@ type ExternalLink struct {
 
 func externalLinkTrackerHandler(mongoUrl string, mongoDbName string) func(http.ResponseWriter, *http.Request) {
 
-	return func (w http.ResponseWriter, req *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
 		sess, err := mgo.Dial(mongoUrl)
 		if err != nil {
 			panic(fmt.Sprintln("mgo:", err))
@@ -24,7 +24,6 @@ func externalLinkTrackerHandler(mongoUrl string, mongoDbName string) func(http.R
 
 		db := sess.DB(mongoDbName)
 		collection := db.C("links")
-
 
 		external_url := req.URL.Query().Get("url")
 		println(external_url)
