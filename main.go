@@ -29,7 +29,8 @@ type ExternalLink struct {
 
 func countHit(url string) {
 	session := getMgoSession()
-	defer session.close()
+
+	defer session.Close()
 
 	collection := session.DB(mgoDatabaseName).C("links")
 
