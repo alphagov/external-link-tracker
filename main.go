@@ -66,6 +66,10 @@ func externalLinkTrackerHandler(mongoUrl string, mongoDbName string) func(http.R
 		} else {
 			go countHit(externalUrl)
 
+			// Make sure this redirect is never cached
+			w.Header().Set("Cache-control", "no-cache, no-store, must-revalidate")
+			w.Header().Set("Pragma", "no-cache")
+			w.Header().Set("Expires", "0")
 			// Explicit 302 because this is a redirection proxy
 			http.Redirect(w, req, externalUrl, http.StatusFound)
 		}
