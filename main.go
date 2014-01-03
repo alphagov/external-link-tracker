@@ -27,7 +27,7 @@ type ExternalLink struct {
 	HitCount    int32  `bson:"hit_count"`
 }
 
-func countHit(url string) {
+func countHitOnURL(url string) {
 	session := getMgoSession()
 	defer session.Close()
 	session.SetMode(mgo.Strong, true)
@@ -64,7 +64,7 @@ func externalLinkTrackerHandler(mongoUrl string, mongoDbName string) func(http.R
 				panic(err)
 			}
 		} else {
-			go countHit(externalUrl)
+			go countHitOnURL(externalUrl)
 
 			// Make sure this redirect is never cached
 			w.Header().Set("Cache-control", "no-cache, no-store, must-revalidate")
