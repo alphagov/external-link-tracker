@@ -34,19 +34,13 @@ func countHit(url string) {
 
 	collection := session.DB(mgoDatabaseName).C("links")
 
-	result := ExternalLink{}
-	change := mgo.Change{
-		Update:    bson.M{"$inc": bson.M{"hit_count": 1}},
-		ReturnNew: true,
-	}
-
-	info, err := collection.Find(bson.M{"external_url", url}).Apply(change, &result)
+	err := collection.Update(bson.M{"external_url": url}, bson.M{
+		"$inc": bson.M{"hit_count": 1},
+	})
 
 	if err != nil {
 		panic(err)
 	}
-
-	println("Count for ", url, " is now: ", result.HitCount)
 }
 
 func externalLinkTrackerHandler(mongoUrl string, mongoDbName string) func(http.ResponseWriter, *http.Request) {
