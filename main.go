@@ -54,13 +54,13 @@ func externalLinkTrackerHandler(mongoUrl string, mongoDbName string) func(http.R
 		externalUrl := req.URL.Query().Get("url")
 
 		result := ExternalLink{}
-		err1 := collection.Find(bson.M{"external_url": externalUrl}).One(&result)
+		err := collection.Find(bson.M{"external_url": externalUrl}).One(&result)
 
-		if err1 != nil {
-			if err1.Error() == "not found" {
+		if err != nil {
+			if err.Error() == "not found" {
 				http.NotFound(w, req)
 			} else {
-				panic(err1)
+				panic(err)
 			}
 		} else {
 			println("Found:", result.ExternalUrl)
