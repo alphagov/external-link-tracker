@@ -63,9 +63,9 @@ func externalLinkTrackerHandler(mongoUrl string, mongoDbName string) func(http.R
 				panic(err)
 			}
 		} else {
-			println("Found:", result.ExternalUrl)
-			// Explicit 302 because this is a redirection proxy
 			go countHit(externalUrl)
+
+			// Explicit 302 because this is a redirection proxy
 			http.Redirect(w, req, externalUrl, http.StatusFound)
 		}
 	}
