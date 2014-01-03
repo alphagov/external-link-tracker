@@ -29,8 +29,8 @@ type ExternalLink struct {
 
 func countHit(url string) {
 	session := getMgoSession()
-
 	defer session.Close()
+	session.SetMode(mgo.Strong, true)
 
 	collection := session.DB(mgoDatabaseName).C("links")
 
@@ -48,6 +48,7 @@ func externalLinkTrackerHandler(mongoUrl string, mongoDbName string) func(http.R
 	return func(w http.ResponseWriter, req *http.Request) {
 		session := getMgoSession()
 		defer session.Close()
+		session.SetMode(mgo.Monotonic, true)
 
 		collection := session.DB(mgoDatabaseName).C("links")
 
@@ -74,5 +75,4 @@ func externalLinkTrackerHandler(mongoUrl string, mongoDbName string) func(http.R
 func main() {
 	http.HandleFunc("/g", externalLinkTrackerHandler("localhost", "external_link_tracker"))
 	http.ListenAndServe("127.0.0.1:8080", nil)
-
 }
