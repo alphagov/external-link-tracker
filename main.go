@@ -39,12 +39,10 @@ func countHitOnURL(url string, time_of_hit time.Time) {
 
 	collection := session.DB(mgoDatabaseName).C("hits")
 
-	hit := ExternalLinkHit{
+	err := collection.Insert(&ExternalLinkHit{
 		ExternalUrl: url,
 		DateTime:    time_of_hit,
-	}
-
-	err := collection.Insert(hit)
+	})
 
 	if err != nil {
 		panic(err)
