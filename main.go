@@ -51,7 +51,7 @@ func countHitOnURL(url string, time_of_hit time.Time) {
 	}
 }
 
-func externalLinkTrackerHandler(mongoUrl string, mongoDbName string) func(http.ResponseWriter, *http.Request) {
+func ExternalLinkTrackerHandler(mongoUrl string, mongoDbName string) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, req *http.Request) {
 		session := getMgoSession()
@@ -85,6 +85,6 @@ func externalLinkTrackerHandler(mongoUrl string, mongoDbName string) func(http.R
 }
 
 func main() {
-	http.HandleFunc("/g", externalLinkTrackerHandler("localhost", "external_link_tracker"))
+	http.HandleFunc("/g", ExternalLinkTrackerHandler("localhost", "external_link_tracker"))
 	http.ListenAndServe("127.0.0.1:8080", nil)
 }
