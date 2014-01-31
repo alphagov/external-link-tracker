@@ -94,7 +94,7 @@ func TestHitsAreLogged(t *testing.T) {
 	ExternalLinkTrackerHandler("localhost", "external_link_tracker_test")(response, request)
 
 	// sleep so the goroutine definitely fires
-	time.Sleep(1)
+	time.Sleep(100 * time.Millisecond)
 
 	collection := mgoSession.DB(mgoDatabaseName).C("hits")
 
