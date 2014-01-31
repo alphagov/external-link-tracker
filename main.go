@@ -10,12 +10,13 @@ import (
 var (
 	mgoSession      *mgo.Session
 	mgoDatabaseName = "external_link_tracker"
+	mgoDatabaseHost = "localhost"
 )
 
 func getMgoSession() *mgo.Session {
 	if mgoSession == nil {
 		var err error
-		mgoSession, err = mgo.Dial("localhost")
+		mgoSession, err = mgo.Dial(mgoDatabaseHost)
 		if err != nil {
 			panic(err) // no, not really
 		}
@@ -50,6 +51,9 @@ func countHitOnURL(url string, time_of_hit time.Time) {
 }
 
 func ExternalLinkTrackerHandler(mongoUrl string, mongoDbName string) func(http.ResponseWriter, *http.Request) {
+
+	mgoDatabaseHost = mongoUrl
+	mgoDatabaseName = mongoDbName
 
 	return func(w http.ResponseWriter, req *http.Request) {
 		session := getMgoSession()
