@@ -29,8 +29,8 @@ type ExternalLink struct {
 }
 
 type ExternalLinkHit struct {
-	ExternalUrl string `bson:"external_url"`
-	DateTime    time.Time
+	ExternalUrl string    `bson:"external_url"`
+	DateTime    time.Time `bson:"date_time"`
 }
 
 func countHitOnURL(url string, time_of_hit time.Time) {
