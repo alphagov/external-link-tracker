@@ -4,6 +4,7 @@ import (
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 	"net/http"
+	"time"
 )
 
 var (
@@ -24,19 +25,26 @@ func getMgoSession() *mgo.Session {
 
 type ExternalLink struct {
 	ExternalUrl string `bson:"external_url"`
-	HitCount    int32  `bson:"hit_count"`
 }
 
-func countHitOnURL(url string) {
+type ExternalLinkHit struct {
+	ExternalUrl string `bson:"external_url"`
+	DateTime    time.Time
+}
+
+func countHitOnURL(url string, time_of_hit time.Time) {
 	session := getMgoSession()
 	defer session.Close()
 	session.SetMode(mgo.Strong, true)
 
-	collection := session.DB(mgoDatabaseName).C("links")
+	collection := session.DB(mgoDatabaseName).C("hits")
 
-	err := collection.Update(bson.M{"external_url": url}, bson.M{
-		"$inc": bson.M{"hit_count": 1},
-	})
+	hit := ExternalLinkHit{
+		ExternalUrl: url,
+		DateTime:    time_of_hit,
+	}
+
+	err := collection.Insert(hit)
 
 	if err != nil {
 		panic(err)
@@ -64,7 +72,7 @@ func externalLinkTrackerHandler(mongoUrl string, mongoDbName string) func(http.R
 				panic(err)
 			}
 		} else {
-			go countHitOnURL(externalUrl)
+			go countHitOnURL(externalUrl, time.Now())
 
 			// Make sure this redirect is never cached
 			w.Header().Set("Cache-control", "no-cache, no-store, must-revalidate")
