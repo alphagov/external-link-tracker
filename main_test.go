@@ -12,12 +12,12 @@ import (
 
 func TestNoRecordReturns404(t *testing.T) {
 	mgoSession, _ := mgo.Dial("localhost")
-	defer mgoSession.DB("external_link_tracker_test").DropDatabase()
+	defer mgoSession.DB(mgoDatabaseName).DropDatabase()
 
 	request, _ := http.NewRequest("GET", "/g", nil)
 	response := httptest.NewRecorder()
 
-	ExternalLinkTrackerHandler("localhost", "external_link_tracker_test")(response, request)
+	ExternalLinkTrackerHandler(response, request)
 
 	if response.Code != http.StatusNotFound {
 		t.Fatalf("Non-expected status code%v:\n\tbody: %v", "404", response.Code)
@@ -28,7 +28,7 @@ func TestExistingUrlIsRedirected(t *testing.T) {
 	mgoSession, _ := mgo.Dial("localhost")
 	defer mgoSession.DB("external_link_tracker_test").DropDatabase()
 
-	collection := mgoSession.DB("external_link_tracker_test").C("links")
+	collection := mgoSession.DB(mgoDatabaseName).C("links")
 	collection.Insert(&ExternalLink{ExternalUrl: "http://example.com"})
 
 	queryParam := url.QueryEscape("http://example.com")
@@ -36,7 +36,7 @@ func TestExistingUrlIsRedirected(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/g?url="+queryParam, nil)
 	response := httptest.NewRecorder()
 
-	ExternalLinkTrackerHandler("localhost", "external_link_tracker_test")(response, request)
+	ExternalLinkTrackerHandler(response, request)
 
 	if response.Code != http.StatusFound {
 		t.Fatalf("Expected 302, got %v", response.Code)
@@ -51,9 +51,9 @@ func TestExistingUrlIsRedirected(t *testing.T) {
 
 func TestRedirectHasNoCache(t *testing.T) {
 	mgoSession, _ := mgo.Dial("localhost")
-	defer mgoSession.DB("external_link_tracker_test").DropDatabase()
+	defer mgoSession.DB(mgoDatabaseName).DropDatabase()
 
-	collection := mgoSession.DB("external_link_tracker_test").C("links")
+	collection := mgoSession.DB(mgoDatabaseName).C("links")
 	collection.Insert(&ExternalLink{ExternalUrl: "http://example.com"})
 
 	queryParam := url.QueryEscape("http://example.com")
@@ -61,7 +61,7 @@ func TestRedirectHasNoCache(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/g?url="+queryParam, nil)
 	response := httptest.NewRecorder()
 
-	ExternalLinkTrackerHandler("localhost", "external_link_tracker_test")(response, request)
+	ExternalLinkTrackerHandler(response, request)
 
 	cacheControl := response.Header().Get("Cache-control")
 	pragma := response.Header().Get("Pragma")
@@ -82,16 +82,16 @@ func TestRedirectHasNoCache(t *testing.T) {
 
 func TestHitsAreLogged(t *testing.T) {
 	mgoSession, _ := mgo.Dial("localhost")
-	defer mgoSession.DB("external_link_tracker_test").DropDatabase()
+	defer mgoSession.DB(mgoDatabaseName).DropDatabase()
 
-	mgoSession.DB("external_link_tracker_test").C("links").Insert(&ExternalLink{ExternalUrl: "http://example.com"})
+	mgoSession.DB(mgoDatabaseName).C("links").Insert(&ExternalLink{ExternalUrl: "http://example.com"})
 
 	queryParam := url.QueryEscape("http://example.com")
 
 	request, _ := http.NewRequest("GET", "/g?url="+queryParam, nil)
 	response := httptest.NewRecorder()
 
-	ExternalLinkTrackerHandler("localhost", "external_link_tracker_test")(response, request)
+	ExternalLinkTrackerHandler(response, request)
 
 	// sleep so the goroutine definitely fires
 	time.Sleep(100 * time.Millisecond)

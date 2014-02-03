@@ -4,19 +4,21 @@ import (
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 	"net/http"
+	"os"
 	"time"
 )
 
 var (
 	mgoSession      *mgo.Session
-	mgoDatabaseName = "external_link_tracker"
-	mgoDatabaseHost = "localhost"
+	pubAddr         = getenvDefault("LINK_TRACKER_PUBADDR", ":8080")
+	mgoDatabaseName = getenvDefault("LINK_TRACKER_MONGO_DB", "external_link_tracker")
+	mgoUrl          = getenvDefault("LINK_TRACKER_MONGO_URL", "localhost")
 )
 
 func getMgoSession() *mgo.Session {
 	if mgoSession == nil {
 		var err error
-		mgoSession, err = mgo.Dial(mgoDatabaseHost)
+		mgoSession, err = mgo.Dial(mgoUrl)
 		if err != nil {
 			panic(err) // no, not really
 		}
@@ -50,42 +52,46 @@ func countHitOnURL(url string, time_of_hit time.Time) {
 	}
 }
 
-func ExternalLinkTrackerHandler(mongoUrl string, mongoDbName string) func(http.ResponseWriter, *http.Request) {
+func ExternalLinkTrackerHandler(w http.ResponseWriter, req *http.Request) {
 
-	mgoDatabaseHost = mongoUrl
-	mgoDatabaseName = mongoDbName
+	session := getMgoSession()
+	defer session.Close()
+	session.SetMode(mgo.Monotonic, true)
 
-	return func(w http.ResponseWriter, req *http.Request) {
-		session := getMgoSession()
-		defer session.Close()
-		session.SetMode(mgo.Monotonic, true)
+	collection := session.DB(mgoDatabaseName).C("links")
 
-		collection := session.DB(mgoDatabaseName).C("links")
+	externalUrl := req.URL.Query().Get("url")
 
-		externalUrl := req.URL.Query().Get("url")
+	err := collection.Find(bson.M{"external_url": externalUrl}).One(&ExternalLink{})
 
-		err := collection.Find(bson.M{"external_url": externalUrl}).One(&ExternalLink{})
-
-		if err != nil {
-			if err.Error() == "not found" {
-				http.NotFound(w, req)
-			} else {
-				panic(err)
-			}
+	if err != nil {
+		if err.Error() == "not found" {
+			http.NotFound(w, req)
 		} else {
-			go countHitOnURL(externalUrl, time.Now())
-
-			// Make sure this redirect is never cached
-			w.Header().Set("Cache-control", "no-cache, no-store, must-revalidate")
-			w.Header().Set("Pragma", "no-cache")
-			w.Header().Set("Expires", "0")
-			// Explicit 302 because this is a redirection proxy
-			http.Redirect(w, req, externalUrl, http.StatusFound)
+			panic(err)
 		}
+	} else {
+		go countHitOnURL(externalUrl, time.Now())
+
+		// Make sure this redirect is never cached
+		w.Header().Set("Cache-control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
+		// Explicit 302 because this is a redirection proxy
+		http.Redirect(w, req, externalUrl, http.StatusFound)
 	}
 }
 
+func getenvDefault(key string, defaultVal string) string {
+	val := os.Getenv(key)
+	if val == "" {
+		val = defaultVal
+	}
+
+	return val
+}
+
 func main() {
-	http.HandleFunc("/g", ExternalLinkTrackerHandler("localhost", "external_link_tracker"))
-	http.ListenAndServe("127.0.0.1:8080", nil)
+	http.HandleFunc("/g", ExternalLinkTrackerHandler)
+	http.ListenAndServe(pubAddr, nil)
 }
