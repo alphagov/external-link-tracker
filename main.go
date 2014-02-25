@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -91,6 +92,50 @@ func ExternalLinkTrackerHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func saveExternalURL(url string) {
+	session := getMgoSession()
+	defer session.Close()
+	session.SetMode(mgo.Strong, true)
+
+	collection := session.DB(mgoDatabaseName).C("links")
+
+	err := collection.Find(bson.M{"external_url": url}).One(&ExternalLink{})
+
+	if err != nil {
+		if err.Error() == "not found" {
+			err1 := collection.Insert(&ExternalLink{
+				ExternalUrl: url,
+			})
+
+			if err1 != nil {
+				panic(err)
+			}
+		}
+	}
+}
+
+// AddExternalUrl allows an external URL to be added to the database
+func AddExternalURL(w http.ResponseWriter, req *http.Request) (int, string) {
+	externalUrl := req.URL.Query().Get("url")
+
+	if externalUrl == "" {
+		return http.StatusBadRequest, "URL is required"
+	}
+
+	parsedUrl, err := url.Parse(externalUrl)
+
+	if err != nil {
+		panic(err)
+	}
+
+	if !parsedUrl.IsAbs() {
+		return http.StatusBadRequest, "URL is not absolute"
+	}
+
+	go saveExternalURL(externalUrl)
+	return http.StatusCreated, "OK"
+}
+
 func getenvDefault(key string, defaultVal string) string {
 	val := os.Getenv(key)
 	if val == "" {
@@ -103,6 +148,6 @@ func getenvDefault(key string, defaultVal string) string {
 func main() {
 	m := martini.Classic()
 	m.Get("/g", ExternalLinkTrackerHandler)
+	m.Put("/url", AddExternalURL)
 	http.ListenAndServe(pubAddr, m)
-	http.ListenAndServe(apiAddr, m)
 }
