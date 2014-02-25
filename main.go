@@ -13,6 +13,7 @@ import (
 var (
 	mgoSession      *mgo.Session
 	pubAddr         = getenvDefault("LINK_TRACKER_PUBADDR", ":8080")
+	apiAddr         = getenvDefault("LINK_TRACKER_APIADDR", ":8081")
 	mgoDatabaseName = getenvDefault("LINK_TRACKER_MONGO_DB", "external_link_tracker")
 	mgoUrl          = getenvDefault("LINK_TRACKER_MONGO_URL", "localhost")
 )
@@ -103,4 +104,5 @@ func main() {
 	m := martini.Classic()
 	m.Get("/g", ExternalLinkTrackerHandler)
 	http.ListenAndServe(pubAddr, m)
+	http.ListenAndServe(apiAddr, m)
 }
