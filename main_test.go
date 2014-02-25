@@ -33,14 +33,14 @@ func TestNoRecordReturns404(t *testing.T) {
 	}
 }
 
-func TestExistingUrlIsRedirected(t *testing.T) {
+func TestExistingURLIsRedirected(t *testing.T) {
 	mgoSession, _ := mgo.Dial("localhost")
 	defer mgoSession.DB("external_link_tracker_test").DropDatabase()
 
 	externalURL := "http://1.example.com"
 
 	collection := mgoSession.DB(mgoDatabaseName).C("links")
-	collection.Insert(&ExternalLink{ExternalUrl: externalURL})
+	collection.Insert(&ExternalLink{ExternalURL: externalURL})
 
 	queryParam := url.QueryEscape(externalURL)
 
@@ -67,7 +67,7 @@ func TestRedirectHasNoCache(t *testing.T) {
 	externalURL := "http://2.example.com"
 
 	collection := mgoSession.DB(mgoDatabaseName).C("links")
-	collection.Insert(&ExternalLink{ExternalUrl: externalURL})
+	collection.Insert(&ExternalLink{ExternalURL: externalURL})
 
 	queryParam := url.QueryEscape(externalURL)
 
@@ -99,7 +99,7 @@ func TestHitsAreLogged(t *testing.T) {
 
 	externalURL := "http://3.example.com"
 
-	mgoSession.DB(mgoDatabaseName).C("links").Insert(&ExternalLink{ExternalUrl: externalURL})
+	mgoSession.DB(mgoDatabaseName).C("links").Insert(&ExternalLink{ExternalURL: externalURL})
 
 	queryParam := url.QueryEscape(externalURL)
 
@@ -209,7 +209,7 @@ func TestAPIGoodURLIsSaved(t *testing.T) {
 		}
 	}
 
-	if result.ExternalUrl != "http://good-url.com" {
-		t.Fatalf("Inserted wrong value, %v", result.ExternalUrl)
+	if result.ExternalURL != "http://good-url.com" {
+		t.Fatalf("Inserted wrong value, %v", result.ExternalURL)
 	}
 }
