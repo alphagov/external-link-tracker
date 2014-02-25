@@ -1,11 +1,13 @@
 package main
 
 import (
-	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/codegangsta/martini"
+	"labix.org/v2/mgo"
+	"labix.org/v2/mgo/bson"
 )
 
 var (
@@ -96,6 +98,7 @@ func getenvDefault(key string, defaultVal string) string {
 }
 
 func main() {
-	http.HandleFunc("/g", ExternalLinkTrackerHandler)
-	http.ListenAndServe(pubAddr, nil)
+	m := martini.Classic()
+	m.Get("/g", ExternalLinkTrackerHandler)
+	http.ListenAndServe(pubAddr, m)
 }
