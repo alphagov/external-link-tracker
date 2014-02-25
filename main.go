@@ -35,7 +35,8 @@ type ExternalLinkHit struct {
 	DateTime    time.Time `bson:"date_time"`
 }
 
-func countHitOnURL(url string, time_of_hit time.Time) {
+// countHitOnURL logs a request time against the passed in URL
+func countHitOnURL(url string, timeOfHit time.Time) {
 	session := getMgoSession()
 	defer session.Close()
 	session.SetMode(mgo.Strong, true)
@@ -44,7 +45,7 @@ func countHitOnURL(url string, time_of_hit time.Time) {
 
 	err := collection.Insert(&ExternalLinkHit{
 		ExternalUrl: url,
-		DateTime:    time_of_hit,
+		DateTime:    timeOfHit,
 	})
 
 	if err != nil {
@@ -52,8 +53,10 @@ func countHitOnURL(url string, time_of_hit time.Time) {
 	}
 }
 
+// ExternalLinkTrackerHandler looks up the `url` against a database whitelist,
+// and if it exists redirects to that URL while logging the request in the
+// background. It will 404 if the whitelist doesn't pass.
 func ExternalLinkTrackerHandler(w http.ResponseWriter, req *http.Request) {
-
 	session := getMgoSession()
 	defer session.Close()
 	session.SetMode(mgo.Monotonic, true)
@@ -67,6 +70,7 @@ func ExternalLinkTrackerHandler(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		if err.Error() == "not found" {
 			http.NotFound(w, req)
+
 		} else {
 			panic(err)
 		}
