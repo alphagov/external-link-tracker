@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -10,6 +11,8 @@ import (
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 )
+
+var dontQuit = make(chan int)
 
 var (
 	mgoSession      *mgo.Session
@@ -145,9 +148,24 @@ func getenvDefault(key string, defaultVal string) string {
 	return val
 }
 
+func catchListenAndServe(addr string, handler http.Handler) {
+	err := http.ListenAndServe(addr, handler)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func main() {
 	m := martini.Classic()
 	m.Get("/g", ExternalLinkTrackerHandler)
-	m.Put("/url", AddExternalURL)
-	http.ListenAndServe(pubAddr, m)
+	mApi := martini.Classic()
+	mApi.Put("/url", AddExternalURL)
+
+	go catchListenAndServe(pubAddr, m)
+	log.Println("external-link-tracker: listening for redirects on " + pubAddr)
+
+	go catchListenAndServe(apiAddr, mApi)
+	log.Println("external-link-tracker: listening for writes on " + apiAddr)
+
+	<-dontQuit
 }
