@@ -10,6 +10,13 @@ import (
 	"time"
 )
 
+// forces Now() to return a specific time
+func NowForce(unix int) {
+	Now = func() time.Time {
+		return time.Unix(int64(unix), 0)
+	}
+}
+
 func TestNoRecordReturns404(t *testing.T) {
 	mgoSession, _ := mgo.Dial("localhost")
 	defer mgoSession.DB(mgoDatabaseName).DropDatabase()
@@ -91,6 +98,9 @@ func TestHitsAreLogged(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/g?url="+queryParam, nil)
 	response := httptest.NewRecorder()
 
+	// lock time
+	NowForce(1388577600) // 2014-01-01T12:00:00z
+
 	ExternalLinkTrackerHandler(response, request)
 
 	// sleep so the goroutine definitely fires
@@ -112,5 +122,11 @@ func TestHitsAreLogged(t *testing.T) {
 
 	if result.ExternalUrl != "http://example.com" {
 		t.Fatalf("Inserted wrong value, %v", result.ExternalUrl)
+	}
+
+	expectedDate := time.Unix(int64(1388577600), 0)
+
+	if result.DateTime != expectedDate {
+		t.Fatalf("DateTime: Got %v, expected %v", result.DateTime.Unix(), expectedDate.Unix())
 	}
 }
