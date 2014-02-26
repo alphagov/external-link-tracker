@@ -1,13 +1,15 @@
 package main
 
 import (
-	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
+
+	"github.com/codegangsta/martini"
+	"labix.org/v2/mgo"
+	"labix.org/v2/mgo/bson"
 )
 
 // forces now() to return a specific time
@@ -31,14 +33,14 @@ func TestNoRecordReturns404(t *testing.T) {
 	}
 }
 
-func TestExistingUrlIsRedirected(t *testing.T) {
+func TestExistingURLIsRedirected(t *testing.T) {
 	mgoSession, _ := mgo.Dial("localhost")
 	defer mgoSession.DB("external_link_tracker_test").DropDatabase()
 
 	externalURL := "http://1.example.com"
 
 	collection := mgoSession.DB(mgoDatabaseName).C("links")
-	collection.Insert(&ExternalLink{ExternalUrl: externalURL})
+	collection.Insert(&ExternalLink{ExternalURL: externalURL})
 
 	queryParam := url.QueryEscape(externalURL)
 
@@ -65,7 +67,7 @@ func TestRedirectHasNoCache(t *testing.T) {
 	externalURL := "http://2.example.com"
 
 	collection := mgoSession.DB(mgoDatabaseName).C("links")
-	collection.Insert(&ExternalLink{ExternalUrl: externalURL})
+	collection.Insert(&ExternalLink{ExternalURL: externalURL})
 
 	queryParam := url.QueryEscape(externalURL)
 
@@ -97,7 +99,7 @@ func TestHitsAreLogged(t *testing.T) {
 
 	externalURL := "http://3.example.com"
 
-	mgoSession.DB(mgoDatabaseName).C("links").Insert(&ExternalLink{ExternalUrl: externalURL})
+	mgoSession.DB(mgoDatabaseName).C("links").Insert(&ExternalLink{ExternalURL: externalURL})
 
 	queryParam := url.QueryEscape(externalURL)
 
@@ -130,5 +132,81 @@ func TestHitsAreLogged(t *testing.T) {
 
 	if result.DateTime != expectedDate {
 		t.Fatalf("DateTime: Got %v, expected %v", result.DateTime.Unix(), expectedDate.Unix())
+	}
+}
+
+func TestAPINoURLReturns400(t *testing.T) {
+	request, _ := http.NewRequest("PUT", "/url", nil)
+	response := httptest.NewRecorder()
+
+	m := martini.Classic()
+	m.Put("/url", AddExternalURL)
+	m.ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("Got status %v, expected %v", response.Code, http.StatusBadRequest)
+	}
+}
+
+func TestAPIBadURLReturns400(t *testing.T) {
+	queryParam := url.QueryEscape("relative-url.com")
+	request, _ := http.NewRequest("PUT", "/url?url="+queryParam, nil)
+	response := httptest.NewRecorder()
+
+	m := martini.Classic()
+	m.Put("/url", AddExternalURL)
+	m.ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("Got status %v, expected %v", response.Code, http.StatusBadRequest)
+	}
+}
+
+func TestAPIGoodURLReturns201(t *testing.T) {
+	mgoSession, _ := mgo.Dial("localhost")
+	defer mgoSession.DB(mgoDatabaseName).DropDatabase()
+
+	queryParam := url.QueryEscape("http://good-url.com")
+	request, _ := http.NewRequest("PUT", "/url?url="+queryParam, nil)
+	response := httptest.NewRecorder()
+
+	m := martini.Classic()
+	m.Put("/url", AddExternalURL)
+	m.ServeHTTP(response, request)
+
+	if response.Code != http.StatusCreated {
+		t.Fatalf("Got status %v, expected %v", response.Code, http.StatusCreated)
+	}
+
+}
+
+func TestAPIGoodURLIsSaved(t *testing.T) {
+	mgoSession, _ := mgo.Dial("localhost")
+	defer mgoSession.DB(mgoDatabaseName).DropDatabase()
+
+	queryParam := url.QueryEscape("http://good-url.com")
+	request, _ := http.NewRequest("PUT", "/url?url="+queryParam, nil)
+	response := httptest.NewRecorder()
+
+	m := martini.Classic()
+	m.Put("/url", AddExternalURL)
+	m.ServeHTTP(response, request)
+
+	collection := mgoSession.DB(mgoDatabaseName).C("links")
+
+	result := ExternalLink{}
+
+	err := collection.Find(bson.M{"external_url": "http://good-url.com"}).One(&result)
+
+	if err != nil {
+		if err.Error() == "not found" {
+			t.Fatal("Couldn't find record")
+		} else {
+			t.Fatalf("Mongo error: %v", err.Error())
+		}
+	}
+
+	if result.ExternalURL != "http://good-url.com" {
+		t.Fatalf("Inserted wrong value, %v", result.ExternalURL)
 	}
 }

@@ -1,18 +1,25 @@
 package main
 
 import (
-	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
+	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
+
+	"github.com/codegangsta/martini"
+	"labix.org/v2/mgo"
+	"labix.org/v2/mgo/bson"
 )
+
+var dontQuit = make(chan int)
 
 var (
 	mgoSession      *mgo.Session
 	pubAddr         = getenvDefault("LINK_TRACKER_PUBADDR", ":8080")
+	apiAddr         = getenvDefault("LINK_TRACKER_APIADDR", ":8081")
 	mgoDatabaseName = getenvDefault("LINK_TRACKER_MONGO_DB", "external_link_tracker")
-	mgoUrl          = getenvDefault("LINK_TRACKER_MONGO_URL", "localhost")
+	mgoURL          = getenvDefault("LINK_TRACKER_MONGO_URL", "localhost")
 )
 
 var now = time.Now
@@ -20,7 +27,7 @@ var now = time.Now
 func getMgoSession() *mgo.Session {
 	if mgoSession == nil {
 		var err error
-		mgoSession, err = mgo.Dial(mgoUrl)
+		mgoSession, err = mgo.Dial(mgoURL)
 		if err != nil {
 			panic(err) // no, not really
 		}
@@ -29,11 +36,11 @@ func getMgoSession() *mgo.Session {
 }
 
 type ExternalLink struct {
-	ExternalUrl string `bson:"external_url"`
+	ExternalURL string `bson:"external_url"`
 }
 
 type ExternalLinkHit struct {
-	ExternalUrl string    `bson:"external_url"`
+	ExternalURL string    `bson:"external_url"`
 	DateTime    time.Time `bson:"date_time"`
 }
 
@@ -46,7 +53,7 @@ func countHitOnURL(url string, timeOfHit time.Time) {
 	collection := session.DB(mgoDatabaseName).C("hits")
 
 	err := collection.Insert(&ExternalLinkHit{
-		ExternalUrl: url,
+		ExternalURL: url,
 		DateTime:    timeOfHit,
 	})
 
@@ -65,9 +72,9 @@ func ExternalLinkTrackerHandler(w http.ResponseWriter, req *http.Request) {
 
 	collection := session.DB(mgoDatabaseName).C("links")
 
-	externalUrl := req.URL.Query().Get("url")
+	externalURL := req.URL.Query().Get("url")
 
-	err := collection.Find(bson.M{"external_url": externalUrl}).One(&ExternalLink{})
+	err := collection.Find(bson.M{"external_url": externalURL}).One(&ExternalLink{})
 
 	if err != nil {
 		if err.Error() == "not found" {
@@ -77,15 +84,66 @@ func ExternalLinkTrackerHandler(w http.ResponseWriter, req *http.Request) {
 			panic(err)
 		}
 	} else {
-		go countHitOnURL(externalUrl, now().UTC())
+		go countHitOnURL(externalURL, now().UTC())
 
 		// Make sure this redirect is never cached
 		w.Header().Set("Cache-control", "no-cache, no-store, must-revalidate")
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "0")
 		// Explicit 302 because this is a redirection proxy
-		http.Redirect(w, req, externalUrl, http.StatusFound)
+		http.Redirect(w, req, externalURL, http.StatusFound)
 	}
+}
+
+func saveExternalURL(url string) error {
+	session := getMgoSession()
+	defer session.Close()
+	session.SetMode(mgo.Strong, true)
+
+	collection := session.DB(mgoDatabaseName).C("links")
+
+	err := collection.Find(bson.M{"external_url": url}).One(&ExternalLink{})
+
+	if err != nil {
+		if err.Error() != "not found" {
+			return err
+		}
+		err1 := collection.Insert(&ExternalLink{
+			ExternalURL: url,
+		})
+
+		if err1 != nil {
+			return err1
+		}
+	}
+	return nil
+}
+
+// AddExternalUrl allows an external URL to be added to the database
+func AddExternalURL(w http.ResponseWriter, req *http.Request) (int, string) {
+	externalURL := req.URL.Query().Get("url")
+
+	if externalURL == "" {
+		return http.StatusBadRequest, "URL is required"
+	}
+
+	parsedURL, err := url.Parse(externalURL)
+
+	if err != nil {
+		panic(err)
+	}
+
+	if !parsedURL.IsAbs() {
+		return http.StatusBadRequest, "URL is not absolute"
+	}
+
+	err1 := saveExternalURL(externalURL)
+
+	if err1 != nil {
+		panic(err1)
+	}
+
+	return http.StatusCreated, "OK"
 }
 
 func getenvDefault(key string, defaultVal string) string {
@@ -97,7 +155,24 @@ func getenvDefault(key string, defaultVal string) string {
 	return val
 }
 
+func catchListenAndServe(addr string, handler http.Handler) {
+	err := http.ListenAndServe(addr, handler)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func main() {
-	http.HandleFunc("/g", ExternalLinkTrackerHandler)
-	http.ListenAndServe(pubAddr, nil)
+	m := martini.Classic()
+	m.Get("/g", ExternalLinkTrackerHandler)
+	mApi := martini.Classic()
+	mApi.Put("/url", AddExternalURL)
+
+	go catchListenAndServe(pubAddr, m)
+	log.Println("external-link-tracker: listening for redirects on " + pubAddr)
+
+	go catchListenAndServe(apiAddr, mApi)
+	log.Println("external-link-tracker: listening for writes on " + apiAddr)
+
+	<-dontQuit
 }
