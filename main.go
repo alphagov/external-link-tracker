@@ -15,9 +15,7 @@ var (
 	mgoUrl          = getenvDefault("LINK_TRACKER_MONGO_URL", "localhost")
 )
 
-var Now = func() time.Time {
-	return time.Now()
-}
+var now = time.Now
 
 func getMgoSession() *mgo.Session {
 	if mgoSession == nil {
@@ -79,7 +77,7 @@ func ExternalLinkTrackerHandler(w http.ResponseWriter, req *http.Request) {
 			panic(err)
 		}
 	} else {
-		go countHitOnURL(externalUrl, Now().UTC())
+		go countHitOnURL(externalUrl, now().UTC())
 
 		// Make sure this redirect is never cached
 		w.Header().Set("Cache-control", "no-cache, no-store, must-revalidate")

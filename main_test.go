@@ -10,9 +10,9 @@ import (
 	"time"
 )
 
-// forces Now() to return a specific time
-func NowForce(unix int) {
-	Now = func() time.Time {
+// forces now() to return a specific time
+func nowForce(unix int) {
+	now = func() time.Time {
 		return time.Unix(int64(unix), 0)
 	}
 }
@@ -35,10 +35,12 @@ func TestExistingUrlIsRedirected(t *testing.T) {
 	mgoSession, _ := mgo.Dial("localhost")
 	defer mgoSession.DB("external_link_tracker_test").DropDatabase()
 
-	collection := mgoSession.DB(mgoDatabaseName).C("links")
-	collection.Insert(&ExternalLink{ExternalUrl: "http://example.com"})
+	externalURL := "http://1.example.com"
 
-	queryParam := url.QueryEscape("http://example.com")
+	collection := mgoSession.DB(mgoDatabaseName).C("links")
+	collection.Insert(&ExternalLink{ExternalUrl: externalURL})
+
+	queryParam := url.QueryEscape(externalURL)
 
 	request, _ := http.NewRequest("GET", "/g?url="+queryParam, nil)
 	response := httptest.NewRecorder()
@@ -51,8 +53,8 @@ func TestExistingUrlIsRedirected(t *testing.T) {
 
 	redirectedTo := response.Header().Get("Location")
 
-	if redirectedTo != "http://example.com" {
-		t.Fatalf("Expected 'http://example.com', got %v", redirectedTo)
+	if redirectedTo != externalURL {
+		t.Fatalf("Expected '%v', got '%v'", externalURL, redirectedTo)
 	}
 }
 
@@ -60,10 +62,12 @@ func TestRedirectHasNoCache(t *testing.T) {
 	mgoSession, _ := mgo.Dial("localhost")
 	defer mgoSession.DB(mgoDatabaseName).DropDatabase()
 
-	collection := mgoSession.DB(mgoDatabaseName).C("links")
-	collection.Insert(&ExternalLink{ExternalUrl: "http://example.com"})
+	externalURL := "http://2.example.com"
 
-	queryParam := url.QueryEscape("http://example.com")
+	collection := mgoSession.DB(mgoDatabaseName).C("links")
+	collection.Insert(&ExternalLink{ExternalUrl: externalURL})
+
+	queryParam := url.QueryEscape(externalURL)
 
 	request, _ := http.NewRequest("GET", "/g?url="+queryParam, nil)
 	response := httptest.NewRecorder()
@@ -91,15 +95,17 @@ func TestHitsAreLogged(t *testing.T) {
 	mgoSession, _ := mgo.Dial("localhost")
 	defer mgoSession.DB(mgoDatabaseName).DropDatabase()
 
-	mgoSession.DB(mgoDatabaseName).C("links").Insert(&ExternalLink{ExternalUrl: "http://example.com"})
+	externalURL := "http://3.example.com"
 
-	queryParam := url.QueryEscape("http://example.com")
+	mgoSession.DB(mgoDatabaseName).C("links").Insert(&ExternalLink{ExternalUrl: externalURL})
+
+	queryParam := url.QueryEscape(externalURL)
 
 	request, _ := http.NewRequest("GET", "/g?url="+queryParam, nil)
 	response := httptest.NewRecorder()
 
 	// lock time
-	NowForce(1388577600) // 2014-01-01T12:00:00z
+	nowForce(1388577600) // 2014-01-01T12:00:00z
 
 	ExternalLinkTrackerHandler(response, request)
 
@@ -110,7 +116,7 @@ func TestHitsAreLogged(t *testing.T) {
 
 	result := ExternalLinkHit{}
 
-	err := collection.Find(bson.M{"external_url": "http://example.com"}).One(&result)
+	err := collection.Find(bson.M{"external_url": externalURL}).One(&result)
 
 	if err != nil {
 		if err.Error() == "not found" {
@@ -118,10 +124,6 @@ func TestHitsAreLogged(t *testing.T) {
 		} else {
 			t.Fatalf("Mongo error: %v", err.Error())
 		}
-	}
-
-	if result.ExternalUrl != "http://example.com" {
-		t.Fatalf("Inserted wrong value, %v", result.ExternalUrl)
 	}
 
 	expectedDate := time.Unix(int64(1388577600), 0)
