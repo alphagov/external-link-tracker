@@ -75,7 +75,7 @@ func ExternalLinkTrackerHandler(w http.ResponseWriter, req *http.Request) {
 			panic(err)
 		}
 	} else {
-		go countHitOnURL(externalUrl, time.Now())
+		go countHitOnURL(externalUrl, time.Now().UTC())
 
 		// Make sure this redirect is never cached
 		w.Header().Set("Cache-control", "no-cache, no-store, must-revalidate")
