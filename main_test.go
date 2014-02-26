@@ -192,9 +192,6 @@ func TestAPIGoodURLIsSaved(t *testing.T) {
 	m.Put("/url", AddExternalURL)
 	m.ServeHTTP(response, request)
 
-	// sleep so the goroutine definitely fires
-	time.Sleep(100 * time.Millisecond)
-
 	collection := mgoSession.DB(mgoDatabaseName).C("links")
 
 	result := ExternalLink{}

@@ -95,7 +95,7 @@ func ExternalLinkTrackerHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func saveExternalURL(url string) {
+func saveExternalURL(url string) error {
 	session := getMgoSession()
 	defer session.Close()
 	session.SetMode(mgo.Strong, true)
@@ -105,16 +105,18 @@ func saveExternalURL(url string) {
 	err := collection.Find(bson.M{"external_url": url}).One(&ExternalLink{})
 
 	if err != nil {
-		if err.Error() == "not found" {
-			err1 := collection.Insert(&ExternalLink{
-				ExternalURL: url,
-			})
+		if err.Error() != "not found" {
+			return err
+		}
+		err1 := collection.Insert(&ExternalLink{
+			ExternalURL: url,
+		})
 
-			if err1 != nil {
-				panic(err)
-			}
+		if err1 != nil {
+			return err1
 		}
 	}
+	return nil
 }
 
 // AddExternalUrl allows an external URL to be added to the database
@@ -135,7 +137,12 @@ func AddExternalURL(w http.ResponseWriter, req *http.Request) (int, string) {
 		return http.StatusBadRequest, "URL is not absolute"
 	}
 
-	go saveExternalURL(externalURL)
+	err1 := saveExternalURL(externalURL)
+
+	if err1 != nil {
+		panic(err1)
+	}
+
 	return http.StatusCreated, "OK"
 }
 
