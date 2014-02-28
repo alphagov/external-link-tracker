@@ -8,7 +8,6 @@ import (
 	"github.com/codegangsta/martini"
 )
 
-var dontQuit = make(chan int)
 
 var (
 	pubAddr         = getenvDefault("LINK_TRACKER_PUBADDR", ":8080")
@@ -43,5 +42,6 @@ func main() {
 	go catchListenAndServe(apiAddr, mApi)
 	log.Println("external-link-tracker: listening for writes on " + apiAddr)
 
+	dontQuit := make(chan int)
 	<-dontQuit
 }
