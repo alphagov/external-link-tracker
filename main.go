@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/alext/graceful_listener"
 	"github.com/codegangsta/martini"
@@ -126,6 +127,9 @@ func upgradeServer(l, lApi *graceful_listener.Listener, reExec chan bool) {
 		log.Fatal(err)
 	}
 
+	// Give the child a chance to start serving requests
+	time.Sleep(1 * time.Second)
+
 	fd, err := l.PrepareFd()
 	if err != nil {
 		log.Fatal(err)
@@ -184,6 +188,9 @@ func stopTemporaryChild() {
 		// Nothing to do
 		return
 	}
+
+	// Give ourselves a chance to start serving requests before killing child
+	time.Sleep(1 * time.Second)
 
 	proc, err := os.FindProcess(childPid)
 	if err != nil {
