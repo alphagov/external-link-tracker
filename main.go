@@ -22,6 +22,7 @@ var (
 	mgoURL          = getenvDefault("LINK_TRACKER_MONGO_URL", "localhost")
 )
 
+// Store function in a variable so it can be overridden in the tests.
 var now = time.Now
 
 func getMgoSession() *mgo.Session {
