@@ -8,10 +8,9 @@ import (
 	"github.com/codegangsta/martini"
 )
 
-
 var (
-	pubAddr         = getenvDefault("LINK_TRACKER_PUBADDR", ":8080")
-	apiAddr         = getenvDefault("LINK_TRACKER_APIADDR", ":8081")
+	pubAddr = getenvDefault("LINK_TRACKER_PUBADDR", ":8080")
+	apiAddr = getenvDefault("LINK_TRACKER_APIADDR", ":8081")
 )
 
 func getenvDefault(key string, defaultVal string) string {
