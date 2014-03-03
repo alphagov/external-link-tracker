@@ -210,3 +210,16 @@ func TestAPIGoodURLIsSaved(t *testing.T) {
 		t.Fatalf("Inserted wrong value, %v", result.ExternalURL)
 	}
 }
+
+func TestHealthcheckWorks(t *testing.T) {
+	request, _ := http.NewRequest("GET", "/healthcheck", nil)
+	response := httptest.NewRecorder()
+
+	m := martini.Classic()
+	m.Get("/healthcheck", healthcheck)
+	m.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("Got status %v, expected %v", response.Code, http.StatusOK)
+	}
+}

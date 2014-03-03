@@ -139,3 +139,7 @@ func AddExternalURL(w http.ResponseWriter, req *http.Request) (int, string) {
 
 	return http.StatusCreated, "OK"
 }
+
+func healthcheck(w http.ResponseWriter, req *http.Request) (int, string) {
+	return http.StatusOK, "OK"
+}
