@@ -35,6 +35,7 @@ func main() {
 	m.Get("/g", ExternalLinkTrackerHandler)
 	mApi := martini.Classic()
 	mApi.Put("/url", AddExternalURL)
+	mApi.Get("/healthcheck", healthcheck)
 
 	go catchListenAndServe(pubAddr, m)
 	log.Println("external-link-tracker: listening for redirects on " + pubAddr)
