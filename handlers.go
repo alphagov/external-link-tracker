@@ -36,10 +36,12 @@ type ExternalLink struct {
 type ExternalLinkHit struct {
 	ExternalURL string    `bson:"external_url"`
 	DateTime    time.Time `bson:"date_time"`
+	Referrer    string    `bson:"referrer"`
 }
 
-// countHitOnURL logs a request time against the passed in URL
-func countHitOnURL(url string, timeOfHit time.Time) {
+// countHitOnURL logs a request time and HTTP 'referer' against the passed in
+// URL
+func countHitOnURL(url string, timeOfHit time.Time, referrer string) {
 	session := getMgoSession()
 	defer session.Close()
 	session.SetMode(mgo.Strong, true)
@@ -49,6 +51,7 @@ func countHitOnURL(url string, timeOfHit time.Time) {
 	err := collection.Insert(&ExternalLinkHit{
 		ExternalURL: url,
 		DateTime:    timeOfHit,
+		Referrer:    referrer,
 	})
 
 	if err != nil {
@@ -78,7 +81,7 @@ func ExternalLinkTrackerHandler(w http.ResponseWriter, req *http.Request) {
 			panic(err)
 		}
 	} else {
-		go countHitOnURL(externalURL, now().UTC())
+		go countHitOnURL(externalURL, now().UTC(), req.Referer())
 
 		// Make sure this redirect is never cached
 		w.Header().Set("Cache-control", "no-cache, no-store, must-revalidate")

@@ -104,6 +104,7 @@ func TestHitsAreLogged(t *testing.T) {
 	queryParam := url.QueryEscape(externalURL)
 
 	request, _ := http.NewRequest("GET", "/g?url="+queryParam, nil)
+	request.Header.Add("Referer", "http://referer.com/path")
 	response := httptest.NewRecorder()
 
 	// lock time
@@ -133,6 +134,11 @@ func TestHitsAreLogged(t *testing.T) {
 	if result.DateTime != expectedDate {
 		t.Fatalf("DateTime: Got %v, expected %v", result.DateTime.Unix(), expectedDate.Unix())
 	}
+
+	if result.Referrer != "http://referer.com/path" {
+		t.Fatalf("Referrer: Got %v, expected %v", result.Referrer, "http://referer.com/path")
+	}
+
 }
 
 func TestAPINoURLReturns400(t *testing.T) {
