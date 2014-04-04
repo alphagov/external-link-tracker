@@ -34,6 +34,7 @@ func main() {
 	m.Get("/g", ExternalLinkTrackerHandler)
 	mApi := martini.Classic()
 	mApi.Put("/url", AddExternalURL)
+	mApi.Get("/url", ReportHitsByURL)
 	mApi.Get("/healthcheck", healthcheck)
 
 	go catchListenAndServe(pubAddr, m)

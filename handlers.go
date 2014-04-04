@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/url"
 	"time"
@@ -145,4 +146,76 @@ func AddExternalURL(w http.ResponseWriter, req *http.Request) (int, string) {
 
 func healthcheck(w http.ResponseWriter, req *http.Request) (int, string) {
 	return http.StatusOK, "OK"
+}
+
+// reports on the last 7 days of hits by URL
+func ReportHitsByURL(w http.ResponseWriter, req *http.Request) (int, string) {
+	session := getMgoSession()
+	defer session.Close()
+	session.SetMode(mgo.Monotonic, true)
+
+	collection := session.DB(mgoDatabaseName).C("hits")
+
+	externalURL := req.URL.Query().Get("url")
+
+	if externalURL == "" {
+		return http.StatusNotFound, "URL is required"
+	}
+
+	today := now().UTC()
+	oneWeekAgo := today.Add(-(24 * 7 * time.Hour))
+
+	query := []bson.D{
+		bson.D{
+			{"$match",
+				bson.M{
+					"external_url": externalURL,
+					"date_time": bson.M{
+						"$gte": oneWeekAgo,
+						"$lte": today,
+					},
+				},
+			},
+		},
+		bson.D{
+			{"$project",
+				bson.M{
+					"external_url": 1,
+					"date": bson.M{
+						"y": bson.M{
+							"$year": "$date_time",
+						},
+						"m": bson.M{
+							"$month": "$date_time",
+						},
+						"d": bson.M{
+							"$dayOfMonth": "$date_time",
+						},
+					},
+				},
+			},
+		},
+		bson.D{
+			{"$group",
+				bson.M{
+					"_id": bson.M{
+						"p": "$external_url",
+						"y": "$date.y",
+						"m": "$date.m",
+						"d": "$date.d",
+					},
+					"hits": bson.M{
+						"$sum": 1,
+					},
+				},
+			},
+		},
+	}
+
+	results := collection.Pipe(query).Iter()
+
+	w.Header().Set("Content-Type", "application/json")
+	jsonPayload, err := json.Marshal(results)
+	return http.StatusOK, jsonPayload
+
 }
