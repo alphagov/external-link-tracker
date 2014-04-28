@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/alext/tablecloth"
 	"github.com/codegangsta/martini"
 )
 
@@ -22,8 +23,8 @@ func getenvDefault(key string, defaultVal string) string {
 	return val
 }
 
-func catchListenAndServe(addr string, handler http.Handler) {
-	err := http.ListenAndServe(addr, handler)
+func catchListenAndServe(addr string, handler http.Handler, ident string) {
+	err := tablecloth.ListenAndServe(addr, handler, ident)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -36,10 +37,10 @@ func main() {
 	mApi.Put("/url", AddExternalURL)
 	mApi.Get("/healthcheck", healthcheck)
 
-	go catchListenAndServe(pubAddr, m)
+	go catchListenAndServe(pubAddr, m, "redirects")
 	log.Println("external-link-tracker: listening for redirects on " + pubAddr)
 
-	go catchListenAndServe(apiAddr, mApi)
+	go catchListenAndServe(apiAddr, mApi, "api")
 	log.Println("external-link-tracker: listening for writes on " + apiAddr)
 
 	dontQuit := make(chan struct{})
