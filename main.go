@@ -33,6 +33,10 @@ func catchListenAndServe(addr string, handler http.Handler, ident string, wg *sy
 }
 
 func main() {
+	if wd := os.Getenv("GOVUK_APP_ROOT"); wd != "" {
+		tablecloth.WorkingDir = wd
+	}
+
 	m := martini.Classic()
 	m.Get("/g", ExternalLinkTrackerHandler)
 	mApi := martini.Classic()
