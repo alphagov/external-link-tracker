@@ -42,6 +42,6 @@ func main() {
 	go catchListenAndServe(apiAddr, mApi)
 	log.Println("external-link-tracker: listening for writes on " + apiAddr)
 
-	dontQuit := make(chan int)
+	dontQuit := make(chan struct{})
 	<-dontQuit
 }
