@@ -20,7 +20,7 @@ func nowForce(unix int) {
 }
 
 func TestNoRecordReturns404(t *testing.T) {
-	mgoSession, _ := mgo.Dial("localhost")
+	mgoSession := connectToMongo(t)
 	defer mgoSession.DB(mgoDatabaseName).DropDatabase()
 
 	request, _ := http.NewRequest("GET", "/g", nil)
@@ -34,7 +34,7 @@ func TestNoRecordReturns404(t *testing.T) {
 }
 
 func TestExistingURLIsRedirected(t *testing.T) {
-	mgoSession, _ := mgo.Dial("localhost")
+	mgoSession := connectToMongo(t)
 	defer mgoSession.DB("external_link_tracker_test").DropDatabase()
 
 	externalURL := "http://1.example.com"
@@ -61,7 +61,7 @@ func TestExistingURLIsRedirected(t *testing.T) {
 }
 
 func TestRedirectHasNoCache(t *testing.T) {
-	mgoSession, _ := mgo.Dial("localhost")
+	mgoSession := connectToMongo(t)
 	defer mgoSession.DB(mgoDatabaseName).DropDatabase()
 
 	externalURL := "http://2.example.com"
@@ -94,7 +94,7 @@ func TestRedirectHasNoCache(t *testing.T) {
 }
 
 func TestHitsAreLogged(t *testing.T) {
-	mgoSession, _ := mgo.Dial("localhost")
+	mgoSession := connectToMongo(t)
 	defer mgoSession.DB(mgoDatabaseName).DropDatabase()
 
 	externalURL := "http://3.example.com"
@@ -169,7 +169,7 @@ func TestAPIBadURLReturns400(t *testing.T) {
 }
 
 func TestAPIGoodURLReturns201(t *testing.T) {
-	mgoSession, _ := mgo.Dial("localhost")
+	mgoSession := connectToMongo(t)
 	defer mgoSession.DB(mgoDatabaseName).DropDatabase()
 
 	queryParam := url.QueryEscape("http://good-url.com")
@@ -187,7 +187,7 @@ func TestAPIGoodURLReturns201(t *testing.T) {
 }
 
 func TestAPIGoodURLIsSaved(t *testing.T) {
-	mgoSession, _ := mgo.Dial("localhost")
+	mgoSession := connectToMongo(t)
 	defer mgoSession.DB(mgoDatabaseName).DropDatabase()
 
 	queryParam := url.QueryEscape("http://good-url.com")
@@ -228,4 +228,14 @@ func TestHealthcheckWorks(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("Got status %v, expected %v", response.Code, http.StatusOK)
 	}
+}
+
+func connectToMongo(t *testing.T) (session *mgo.Session) {
+	session, err := mgo.DialWithTimeout("localhost", 200*time.Millisecond)
+
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	return session
 }
