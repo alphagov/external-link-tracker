@@ -1,14 +1,22 @@
 .PHONY: build run test clean
 
-GOPATH := `pwd`/vendor:$(GOPATH)
 BINARY := external-link-tracker
 BUILDFILES := main.go handlers.go
 
-build:
-	GOPATH=$(GOPATH) go build -o $(BINARY) $(BUILDFILES)
+build: $(BINARY)
 
-run:
-	GOPATH=$(GOPATH) go run $(BUILDFILES)
+run: _vendor
+	gom run $(BUILDFILES)
 
-test:
-	LINK_TRACKER_MONGO_DB=external_link_tracker_test GOPATH=$(GOPATH) go test
+test: _vendor
+	LINK_TRACKER_MONGO_DB=external_link_tracker_test gom test
+
+clean:
+	rm -f $(BINARY)
+
+_vendor: Gomfile
+	gom install
+	touch _vendor
+
+$(BINARY): _vendor $(BUILDFILES)
+	gom build -o $(BINARY) $(BUILDFILES)

@@ -1,3 +1,5 @@
 /main
 /external-link-tracker
 *.test
+
+/_vendor
