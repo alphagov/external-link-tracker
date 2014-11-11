@@ -140,6 +140,17 @@ func TestHitsAreLogged(t *testing.T) {
 
 }
 
+func TestExternalLinkTrackerHandlerOnlyAcceptsGET(t *testing.T) {
+	request, _ := http.NewRequest("PUT", "/g", nil)
+	response := httptest.NewRecorder()
+
+	ExternalLinkTrackerHandler(response, request)
+
+	if response.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Got status %v, expected %v", response.Code, http.StatusMethodNotAllowed)
+	}
+}
+
 func TestAPINoURLReturns400(t *testing.T) {
 	request, _ := http.NewRequest("PUT", "/url", nil)
 	response := httptest.NewRecorder()
@@ -208,6 +219,17 @@ func TestAPIGoodURLIsSaved(t *testing.T) {
 	}
 }
 
+func TestAddExternalURLOnlyAcceptsPUT(t *testing.T) {
+	request, _ := http.NewRequest("GET", "/url", nil)
+	response := httptest.NewRecorder()
+
+	AddExternalURL(response, request)
+
+	if response.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Got status %v, expected %v", response.Code, http.StatusMethodNotAllowed)
+	}
+}
+
 func TestHealthcheckWorks(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/healthcheck", nil)
 	response := httptest.NewRecorder()
@@ -216,6 +238,17 @@ func TestHealthcheckWorks(t *testing.T) {
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("Got status %v, expected %v", response.Code, http.StatusOK)
+	}
+}
+
+func TestHealthcheckOnlyAcceptsGET(t *testing.T) {
+	request, _ := http.NewRequest("PUT", "/healthcheck", nil)
+	response := httptest.NewRecorder()
+
+	healthcheck(response, request)
+
+	if response.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Got status %v, expected %v", response.Code, http.StatusMethodNotAllowed)
 	}
 }
 
