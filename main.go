@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/alext/tablecloth"
-	"github.com/codegangsta/martini"
 )
 
 var (
@@ -37,18 +36,19 @@ func main() {
 		tablecloth.WorkingDir = wd
 	}
 
-	m := martini.Classic()
-	m.Get("/g", ExternalLinkTrackerHandler)
-	mApi := martini.Classic()
-	mApi.Put("/url", AddExternalURL)
-	mApi.Get("/healthcheck", healthcheck)
+	publicMux := http.NewServeMux()
+	publicMux.HandleFunc("/g", ExternalLinkTrackerHandler)
+
+	apiMux := http.NewServeMux()
+	apiMux.HandleFunc("/url", AddExternalURL)
+	apiMux.HandleFunc("/healthcheck", healthcheck)
 
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
-	go catchListenAndServe(pubAddr, m, "redirects", wg)
+	go catchListenAndServe(pubAddr, publicMux, "redirects", wg)
 	log.Println("external-link-tracker: listening for redirects on " + pubAddr)
 
-	go catchListenAndServe(apiAddr, mApi, "api", wg)
+	go catchListenAndServe(apiAddr, apiMux, "api", wg)
 	log.Println("external-link-tracker: listening for writes on " + apiAddr)
 
 	wg.Wait()

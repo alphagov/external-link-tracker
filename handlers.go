@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -117,11 +118,12 @@ func saveExternalURL(url string) error {
 }
 
 // AddExternalUrl allows an external URL to be added to the database
-func AddExternalURL(w http.ResponseWriter, req *http.Request) (int, string) {
+func AddExternalURL(w http.ResponseWriter, req *http.Request) {
 	externalURL := req.URL.Query().Get("url")
 
 	if externalURL == "" {
-		return http.StatusBadRequest, "URL is required"
+		http.Error(w, "URL is required", http.StatusBadRequest)
+		return
 	}
 
 	parsedURL, err := url.Parse(externalURL)
@@ -131,7 +133,8 @@ func AddExternalURL(w http.ResponseWriter, req *http.Request) (int, string) {
 	}
 
 	if !parsedURL.IsAbs() {
-		return http.StatusBadRequest, "URL is not absolute"
+		http.Error(w, "URL is not absolute", http.StatusBadRequest)
+		return
 	}
 
 	err1 := saveExternalURL(externalURL)
@@ -140,9 +143,10 @@ func AddExternalURL(w http.ResponseWriter, req *http.Request) (int, string) {
 		panic(err1)
 	}
 
-	return http.StatusCreated, "OK"
+	w.WriteHeader(http.StatusCreated)
+	fmt.Fprintln(w, "OK")
 }
 
-func healthcheck(w http.ResponseWriter, req *http.Request) (int, string) {
-	return http.StatusOK, "OK"
+func healthcheck(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprintln(w, "OK")
 }
