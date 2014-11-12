@@ -34,7 +34,7 @@ func TestNoRecordReturns404(t *testing.T) {
 
 func TestExistingURLIsRedirected(t *testing.T) {
 	mgoSession := connectToMongo(t)
-	defer mgoSession.DB("external_link_tracker_test").DropDatabase()
+	defer mgoSession.DB(mgoDatabaseName).DropDatabase()
 
 	externalURL := "http://1.example.com"
 
