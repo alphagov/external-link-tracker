@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -63,6 +64,12 @@ func countHitOnURL(url string, timeOfHit time.Time, referrer string) {
 // and if it exists redirects to that URL while logging the request in the
 // background. It will 404 if the whitelist doesn't pass.
 func ExternalLinkTrackerHandler(w http.ResponseWriter, req *http.Request) {
+	if req.Method != "GET" {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		w.Header().Set("Allow", "GET")
+		return
+	}
+
 	session := getMgoSession()
 	defer session.Close()
 	session.SetMode(mgo.Monotonic, true)
@@ -117,11 +124,18 @@ func saveExternalURL(url string) error {
 }
 
 // AddExternalUrl allows an external URL to be added to the database
-func AddExternalURL(w http.ResponseWriter, req *http.Request) (int, string) {
+func AddExternalURL(w http.ResponseWriter, req *http.Request) {
+	if req.Method != "PUT" {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		w.Header().Set("Allow", "PUT")
+		return
+	}
+
 	externalURL := req.URL.Query().Get("url")
 
 	if externalURL == "" {
-		return http.StatusBadRequest, "URL is required"
+		http.Error(w, "URL is required", http.StatusBadRequest)
+		return
 	}
 
 	parsedURL, err := url.Parse(externalURL)
@@ -131,7 +145,8 @@ func AddExternalURL(w http.ResponseWriter, req *http.Request) (int, string) {
 	}
 
 	if !parsedURL.IsAbs() {
-		return http.StatusBadRequest, "URL is not absolute"
+		http.Error(w, "URL is not absolute", http.StatusBadRequest)
+		return
 	}
 
 	err1 := saveExternalURL(externalURL)
@@ -140,9 +155,16 @@ func AddExternalURL(w http.ResponseWriter, req *http.Request) (int, string) {
 		panic(err1)
 	}
 
-	return http.StatusCreated, "OK"
+	w.WriteHeader(http.StatusCreated)
+	fmt.Fprintln(w, "OK")
 }
 
-func healthcheck(w http.ResponseWriter, req *http.Request) (int, string) {
-	return http.StatusOK, "OK"
+func healthcheck(w http.ResponseWriter, req *http.Request) {
+	if req.Method != "GET" {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		w.Header().Set("Allow", "GET")
+		return
+	}
+
+	fmt.Fprintln(w, "OK")
 }
