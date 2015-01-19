@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"labix.org/v2/mgo"
@@ -12,6 +13,7 @@ import (
 
 var (
 	mgoSession      *mgo.Session
+	mgoSessionOnce  sync.Once
 	mgoDatabaseName = getenvDefault("LINK_TRACKER_MONGO_DB", "external_link_tracker")
 	mgoURL          = getenvDefault("LINK_TRACKER_MONGO_URL", "localhost")
 )
@@ -20,13 +22,13 @@ var (
 var now = time.Now
 
 func getMgoSession() *mgo.Session {
-	if mgoSession == nil {
+	mgoSessionOnce.Do(func() {
 		var err error
 		mgoSession, err = mgo.Dial(mgoURL)
 		if err != nil {
 			panic(err) // no, not really
 		}
-	}
+	})
 	return mgoSession.Clone()
 }
 
