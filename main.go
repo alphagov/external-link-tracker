@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/alext/tablecloth"
 	"labix.org/v2/mgo"
@@ -48,6 +49,17 @@ func catchListenAndServe(addr string, handler http.Handler, ident string, wg *sy
 }
 
 func main() {
+
+	// in order to ensure the database doesn't grown to enormous sizes, cap the
+	// collection to a week
+	session := getMgoSession()
+	database := session.DB(mgoDatabaseName)
+	index := mgo.Index{
+		Key:         []string{"date_time"},
+		ExpireAfter: 24 * time.Hour * 7, // expire after a week
+	}
+	database.C("hits").EnsureIndex(index)
+
 	if wd := os.Getenv("GOVUK_APP_ROOT"); wd != "" {
 		tablecloth.WorkingDir = wd
 	}
