@@ -7,11 +7,7 @@ import (
 	"sync"
 
 	"github.com/alext/tablecloth"
-)
-
-var (
-	pubAddr = getenvDefault("LINK_TRACKER_PUBADDR", ":8080")
-	apiAddr = getenvDefault("LINK_TRACKER_APIADDR", ":8081")
+	"labix.org/v2/mgo"
 )
 
 func getenvDefault(key string, defaultVal string) string {
@@ -21,6 +17,26 @@ func getenvDefault(key string, defaultVal string) string {
 	}
 
 	return val
+}
+
+var (
+	pubAddr         = getenvDefault("LINK_TRACKER_PUBADDR", ":8080")
+	apiAddr         = getenvDefault("LINK_TRACKER_APIADDR", ":8081")
+	mgoSession      *mgo.Session
+	mgoSessionOnce  sync.Once
+	mgoDatabaseName = getenvDefault("LINK_TRACKER_MONGO_DB", "external_link_tracker")
+	mgoURL          = getenvDefault("LINK_TRACKER_MONGO_URL", "localhost")
+)
+
+func getMgoSession() *mgo.Session {
+	mgoSessionOnce.Do(func() {
+		var err error
+		mgoSession, err = mgo.Dial(mgoURL)
+		if err != nil {
+			panic(err) // no, not really
+		}
+	})
+	return mgoSession.Clone()
 }
 
 func catchListenAndServe(addr string, handler http.Handler, ident string, wg *sync.WaitGroup) {
