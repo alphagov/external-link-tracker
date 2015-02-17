@@ -47,12 +47,6 @@ func countHitOnURL(url string, timeOfHit time.Time, referrer string) {
 // and if it exists redirects to that URL while logging the request in the
 // background. It will 404 if the whitelist doesn't pass.
 func ExternalLinkTrackerHandler(w http.ResponseWriter, req *http.Request) {
-	if req.Method != "GET" {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		w.Header().Set("Allow", "GET")
-		return
-	}
-
 	session := getMgoSession()
 	defer session.Close()
 	session.SetMode(mgo.Monotonic, true)
@@ -108,12 +102,6 @@ func saveExternalURL(url string) error {
 
 // AddExternalUrl allows an external URL to be added to the database
 func AddExternalURL(w http.ResponseWriter, req *http.Request) {
-	if req.Method != "PUT" {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		w.Header().Set("Allow", "PUT")
-		return
-	}
-
 	externalURL := req.URL.Query().Get("url")
 
 	if externalURL == "" {
@@ -143,11 +131,5 @@ func AddExternalURL(w http.ResponseWriter, req *http.Request) {
 }
 
 func healthcheck(w http.ResponseWriter, req *http.Request) {
-	if req.Method != "GET" {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		w.Header().Set("Allow", "GET")
-		return
-	}
-
 	fmt.Fprintln(w, "OK")
 }

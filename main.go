@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/alext/tablecloth"
+	"github.com/gorilla/mux"
 	"labix.org/v2/mgo"
 )
 
@@ -64,12 +65,12 @@ func main() {
 		tablecloth.WorkingDir = wd
 	}
 
-	publicMux := http.NewServeMux()
-	publicMux.HandleFunc("/g", ExternalLinkTrackerHandler)
+	publicMux := mux.NewRouter()
+	publicMux.Methods("GET").Path("/g").HandlerFunc(ExternalLinkTrackerHandler)
 
-	apiMux := http.NewServeMux()
-	apiMux.HandleFunc("/url", AddExternalURL)
-	apiMux.HandleFunc("/healthcheck", healthcheck)
+	apiMux := mux.NewRouter()
+	apiMux.Methods("PUT").Path("/url").HandlerFunc(AddExternalURL)
+	apiMux.Methods("GET").Path("/healthcheck").HandlerFunc(healthcheck)
 
 	wg := &sync.WaitGroup{}
 	wg.Add(2)

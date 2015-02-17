@@ -146,7 +146,7 @@ func TestExternalLinkTrackerHandlerOnlyAcceptsGET(t *testing.T) {
 
 	ExternalLinkTrackerHandler(response, request)
 
-	if response.Code != http.StatusMethodNotAllowed {
+	if response.Code != http.StatusNotFound {
 		t.Fatalf("Got status %v, expected %v", response.Code, http.StatusMethodNotAllowed)
 	}
 }
@@ -225,8 +225,8 @@ func TestAddExternalURLOnlyAcceptsPUT(t *testing.T) {
 
 	AddExternalURL(response, request)
 
-	if response.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("Got status %v, expected %v", response.Code, http.StatusMethodNotAllowed)
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("Got status %v, expected %v", response.Code, http.StatusBadRequest)
 	}
 }
 
@@ -238,17 +238,6 @@ func TestHealthcheckWorks(t *testing.T) {
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("Got status %v, expected %v", response.Code, http.StatusOK)
-	}
-}
-
-func TestHealthcheckOnlyAcceptsGET(t *testing.T) {
-	request, _ := http.NewRequest("PUT", "/healthcheck", nil)
-	response := httptest.NewRecorder()
-
-	healthcheck(response, request)
-
-	if response.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("Got status %v, expected %v", response.Code, http.StatusMethodNotAllowed)
 	}
 }
 
