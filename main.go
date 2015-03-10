@@ -57,6 +57,7 @@ func main() {
 	index := mgo.Index{
 		Key:         []string{"date_time"},
 		ExpireAfter: 24 * time.Hour * 7, // expire after a week
+		Background:  true,
 	}
 	database.C("hits").EnsureIndex(index)
 
